@@ -8,6 +8,7 @@ from gymnasium import Wrapper
 from pogema import pogema_v0, GridConfig
 from pogema.animation import AnimationMonitor, AnimationConfig
 from utils import draw_history
+import shutil
 
 
 def obs_to_state(obs):
@@ -105,17 +106,25 @@ if __name__ == '__main__':
     }
 
     # Crear directorio para almacenar los renders
-    try:
-        os.mkdir(exp_config["renders"])
-    except:
-        pass
+    if os.path.exists(exp_config["renders"]):
+        shutil.rmtree(exp_config["renders"])
+    os.makedirs(exp_config["renders"])
 
     # Modelo de juego y algoritmos (uno para cada agente)
     game = GameModel(num_agents=exp_config["num_agents"], num_states=exp_config["num_states"],
                      num_actions=5)  # STAY, UP, DOWN, LEFT, RIGHT
-    algorithms = [JALGT(i, game, exp_config["solution_concept"](), epsilon=exp_config["epsilon_max"],
-                        alpha=exp_config["learning_rate"], seed=i)
-                  for i in range(game.num_agents)]
+    algorithms = [
+        JALGT(
+            agent_id=i,
+            game=game,
+            solution_concept=exp_config["solution_concept"](),
+            epsilon=exp_config["epsilon_max"],
+            gamma=0.95,
+            alpha=exp_config["learning_rate"],
+            seed=i
+        )
+        for i in range(game.num_agents)
+    ]
 
     # Caída lineal de epsilon: precalculamos la diferencia en cada paso
     epsilon_diff = (exp_config["epsilon_max"] - exp_config["epsilon_min"]) / exp_config["episodes_per_epoch"]

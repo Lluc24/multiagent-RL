@@ -5,3 +5,4 @@ private/
 wandb/
 .idea/
 notebooks/
+renders/

@@ -44,8 +44,12 @@ class JALGT(MARLAlgorithm):
         value = 0
         for idx, joint_action in enumerate(self.game.action_space):
             payoff = self.q_table[agent_id][state][idx]
-            joint_probability = np.prod([self.joint_policy[i][state][joint_action[i]]
-                                         for i in range(self.game.num_agents)])
+            joint_probability = np.prod(
+                [
+                    self.joint_policy[i][state][joint_action[i]]
+                    for i in range(self.game.num_agents)
+                ]
+            )
             value += payoff * joint_probability
         return value
 
