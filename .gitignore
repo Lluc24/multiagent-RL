@@ -6,3 +6,4 @@ wandb/
 .idea/
 notebooks/
 renders/
+__pycache__
