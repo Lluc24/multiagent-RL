@@ -1,4 +1,6 @@
 env
+pogema-env
+wandb-env
 .ipynb_checkpoints
 .python-version
 private/
@@ -6,3 +8,5 @@ wandb/
 .idea/
 notebooks/
 renders/
+logs/
+__pycache__/
