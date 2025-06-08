@@ -35,14 +35,14 @@ def train(config=None):
         with open(metrics_path, "r") as f:
             metrics = json.load(f)
 
+        reward = metrics.pop("reward")
+        epochs = metrics.pop("epochs")
+        num_agents = metrics.pop("num_agents")
         # Log to wandb
-        wandb.log({"reward": metrics["reward"]})
-        for epoch in range(len(metrics["td_error_per_epoch"])):
-            wandb.log({
-                "td_error_per_epoch": metrics["td_error_per_epoch"][epoch],
-                "train_reward_per_epoch": metrics["train_reward_per_epoch"][epoch],
-                "evaluation_reward_per_epoch": metrics["evaluation_reward_per_epoch"][epoch],
-            })
+        wandb.log({"reward": reward}, step=0)
+        for epoch in range(epochs):
+            for key, value in metrics.items():
+                wandb.log({key: value[epoch]}, step=epoch)
 
 
 

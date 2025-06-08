@@ -3,15 +3,13 @@ from tqdm import tqdm
 from algorithms import JALGT
 from environment import Environment, obs_to_state
 from game_model import GameModel
-import numpy as np
 import shutil
 import argparse
 import json
 from parameters import Parameters
+from metrics import Metrics
 
-def train_algorithms(parameters, env_manager, algorithms):
-    td_error_per_episode = np.zeros(shape=parameters.get("episodes_per_epoch"))
-    reward_per_episode = np.zeros(shape=parameters.get("episodes_per_epoch"))
+def train_algorithms(parameters, env_manager, algorithms, metrics):
     for ep in range(parameters.get("episodes_per_epoch")):
         env = env_manager.new_env(seed=ep % parameters.get("num_maps"))
         observations, infos = env.reset()
@@ -28,17 +26,15 @@ def train_algorithms(parameters, env_manager, algorithms):
             for i in range(parameters.get("num_agents")):
                 # Aprendemos: actualizamos valores Q
                 algorithms[i].learn(actions, rewards, states[i], new_states[i])
-                # Actualizamos métricas
-                reward_per_episode[ep] += rewards[i]
-            td_error_per_episode[ep] += algorithms[0].metrics["td_error"][-1]
             states = new_states
-        # Actualizamos epsilon
-        for i in range(parameters.get("num_agents")):
-            algorithms[i].set_epsilon(parameters.get("epsilon_max") - parameters.get("epsilon_diff") * ep)
-    return td_error_per_episode, reward_per_episode
 
-def evaluate_algorithms(parameters, env_manager, algorithms, solution_concept_name, epoch):
-    reward_per_episode = np.zeros(shape=parameters.get("episodes_per_epoch"))
+            # métricas
+            metrics.add_rewards(rewards)
+            metrics.add_steps(terminated, truncated)
+            metrics.add_td_errors([algorithms[i].metrics["td_error"][-1]for i in range(parameters.get("num_agents"))])
+        metrics.add_to_success_rates(terminated, truncated)
+
+def evaluate_algorithms(parameters, env_manager, algorithms, metrics, solution_concept_name, epoch):
     for ep in range(parameters.get("num_maps")):
         env = env_manager.new_env(seed=ep)  # Reaprovechamos mapas del entrenamiento
         observations, infos = env.reset()
@@ -49,11 +45,13 @@ def evaluate_algorithms(parameters, env_manager, algorithms, solution_concept_na
             actions = tuple(algorithms[i].select_action(states[i], train=False) for i in range(parameters.get("num_agents")))
             observations, rewards, terminated, truncated, infos = env.step(actions)
             states = [obs_to_state(observations[i]) for i in range(parameters.get("num_agents"))]
-            for i in range(parameters.get("num_agents")):
-                reward_per_episode[ep] += rewards[i]
+
+            # métricas
+            metrics.add_rewards(rewards, training=False)
+            metrics.add_steps(terminated, truncated, training=False)
+        metrics.add_to_success_rates(terminated, truncated, training=False)
         # Guardamos animaciones
         env_manager.save_animations(solution_concept_name, ep, epoch)
-    return reward_per_episode
 
 def setup(wandb_config):
     parameters = Parameters(wandb_config)
@@ -87,42 +85,37 @@ def setup(wandb_config):
             solution_concept=parameters.get("solution_concept_class")(),
             epsilon=parameters.get("epsilon_max"),
             gamma=parameters.get("gamma"),
-            alpha=parameters.get("learning_rate"),
+            alpha=parameters.get("alpha_max"),
             seed=i
         )
         for i in range(game.num_agents)
     ]
 
-    return parameters, environment, algorithms
+    metrics = Metrics(
+        num_agents = parameters.get("num_agents"),
+        num_epochs = parameters.get("epochs"),
+        train_episodes = parameters.get("episodes_per_epoch"),
+        evaluate_episodes = parameters.get("num_maps"),
+    )
+
+    return parameters, environment, algorithms, metrics
 
 def run(output_path, config=None):
-    parameters, environment, algorithms = setup(config)
+    parameters, environment, algorithms, metrics = setup(config)
     solution_concept_name = parameters.get("solution_concept_class").__name__
-    td_error_per_epoch = np.empty(shape=parameters.get("epochs"))
-    train_reward_per_epoch = np.empty(shape=parameters.get("epochs"))
-    evaluation_reward_per_epoch = np.empty(shape=parameters.get("epochs"))
     for epoch in tqdm(range(parameters.get("epochs"))):
-        # Entrenamiento
-        ###############
-        td_error_per_episode, train_reward_per_episode = train_algorithms(parameters, environment, algorithms)
-        td_error_per_epoch[epoch] = np.sum(td_error_per_episode)
-        train_reward_per_epoch[epoch] = np.sum(train_reward_per_episode)
+        train_algorithms(parameters, environment, algorithms, metrics)
+        evaluate_algorithms(parameters, environment, algorithms, metrics, solution_concept_name, epoch)
 
-        # Evaluación
-        ############
-        evaluation_reward_per_episode = evaluate_algorithms(
-            parameters, environment, algorithms, solution_concept_name, epoch
-        )
-        evaluation_reward_per_epoch[epoch] = np.sum(evaluation_reward_per_episode)
+        metrics.set_epsilon(algorithms[0].epsilon)
+        metrics.set_alpha(algorithms[0].alpha)
+        for i in range(parameters.get("num_agents")):
+            algorithms[i].epsilon = max(parameters.get("epsilon_decay")*algorithms[i].epsilon, parameters.get("epsilon_min"))
+            algorithms[i].alpha = max(parameters.get("alpha_decay")*algorithms[i].alpha, parameters.get("alpha_min"))
 
-    with open(output_path, "w") as f:
-        metrics = {
-            "td_error_per_epoch": td_error_per_epoch.tolist(),
-            "train_reward_per_epoch": train_reward_per_epoch.tolist(),
-            "evaluation_reward_per_epoch": evaluation_reward_per_epoch.tolist(),
-            "reward" : np.average(evaluation_reward_per_epoch).item(),
-        }
-        json.dump(metrics, f, indent=4)
+        metrics.incr_epoch()
+
+        metrics.serialize_metrics(output_path)
 
 
 if __name__ == '__main__':
