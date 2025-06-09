@@ -8,6 +8,7 @@ import argparse
 import json
 from parameters import Parameters
 from metrics import Metrics
+from solution_concepts import ParetoSolutionConcept, NashSolutionConcept, WelfareSolutionConcept, MinimaxSolutionConcept
 
 def train_algorithms(parameters, env_manager, algorithms, metrics):
     for ep in range(parameters.get("episodes_per_epoch")):
@@ -53,8 +54,18 @@ def evaluate_algorithms(parameters, env_manager, algorithms, metrics, solution_c
         # Guardamos animaciones
         env_manager.save_animations(solution_concept_name, ep, epoch)
 
-def setup(wandb_config):
-    parameters = Parameters(wandb_config)
+def setup(wandb_config, solution_concept):
+    if solution_concept == "Pareto":
+        solution_concept_class = ParetoSolutionConcept
+    elif solution_concept == "Nash":
+        solution_concept_class = NashSolutionConcept
+    elif solution_concept == "Welfare":
+        solution_concept_class = WelfareSolutionConcept
+    elif solution_concept == "Minimax":
+        solution_concept_class = MinimaxSolutionConcept
+    else:
+        raise ValueError(f"Unknown solution concept: {solution_concept}")
+    parameters = Parameters(wandb_config, solution_concept_class)
     parameters.print()
     environment = Environment(
         num_agents=parameters.get("num_agents"),
@@ -100,12 +111,12 @@ def setup(wandb_config):
 
     return parameters, environment, algorithms, metrics
 
-def run(output_path, config=None):
-    parameters, environment, algorithms, metrics = setup(config)
-    solution_concept_name = parameters.get("solution_concept_class").__name__
+def run(output_path, solution_concept, config=None):
+    parameters, environment, algorithms, metrics = setup(config, solution_concept)
+    solution_concept_class = parameters.get("solution_concept_class")
     for epoch in tqdm(range(parameters.get("epochs"))):
         train_algorithms(parameters, environment, algorithms, metrics)
-        evaluate_algorithms(parameters, environment, algorithms, metrics, solution_concept_name, epoch)
+        evaluate_algorithms(parameters, environment, algorithms, metrics, solution_concept_class, epoch)
 
         metrics.set_epsilon(algorithms[0].epsilon)
         metrics.set_alpha(algorithms[0].alpha)
@@ -122,11 +133,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script for running an experiment.')
     parser.add_argument('--configuration', type=str, help='Path to the configuration file', required=False)
     parser.add_argument("--metrics", type=str, help="Path for the output metrics", required=True)
+    parser.add_argument("--solution-concept", type=str, help="Solution concept to be used for all agents", required=True)
     args = parser.parse_args()
     # Load the configuration file as a dictionary (it is a JSON file)
     if args.configuration is None:
-        run(args.metrics)
+        run(args.metrics, args.solution_concept)
     else:
         with open(args.configuration, "r") as f:
             config = json.load(f)
-        run(args.metrics, config)
+        run(args.metrics, args.solution_concept, config)

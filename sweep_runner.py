@@ -5,8 +5,9 @@ import subprocess
 import argparse
 import os
 
-class Files:
+class Vars:
     path_to_script = None
+    soluction_concept = None
 
 def train(config=None):
     # Initialize a new wandb run
@@ -26,9 +27,10 @@ def train(config=None):
         # Call pogema script (from its env)
         subprocess.run([
             os.path.join("pogema-env", "bin", "python"),  # path to pogema-env Python
-            Files.path_to_script,  # script to run
+            Vars.path_to_script,  # script to run
             "--configuration", config_path,
             "--metrics", metrics_path,
+            "--solution-concept", Vars.soluction_concept
         ])
 
         # Read metrics
@@ -52,6 +54,7 @@ if __name__ == "__main__":
     parser.add_argument("--script", type=str, help="Path to the script to run the experiment with", required=True)
     parser.add_argument('--sweep', type=str, help='Path to the sweep (e.g. sweeps/sweep1.json)', required=True)
     parser.add_argument("--count", type=int, default=30, help="Number of runs to perform in the sweep")
+    parser.add_argument("--solution-concept", type=str, help="Solution concept to be used for all agents", default="Pareto")
     args = parser.parse_args()
 
     logs_dir = "logs"
@@ -61,7 +64,8 @@ if __name__ == "__main__":
         if not os.path.exists(path):
             os.makedirs(path)
 
-    Files.path_to_script = args.script
+    Vars.path_to_script = args.script
+    Vars.soluction_concept = args.solution_concept
 
     with open(args.sweep, "r") as f:
         sweep_config = json.load(f)

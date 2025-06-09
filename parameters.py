@@ -1,8 +1,5 @@
-from solution_concepts import ParetoSolutionConcept
-
-
 class Parameters:
-    def __init__(self, config=None):
+    def __init__(self, config=None, solution_concept_class=None):
         self.config = config
 
         # Parámetros que suelen venir en config (de wandb)
@@ -25,9 +22,9 @@ class Parameters:
         self.observation_radius = 1
 
         # Parámetros necesariamente fijados por el usuario
+        self.solution_concept_class = solution_concept_class  # Nombre del concepto de solución a utilizar
         self.renders_dir = "renders/"
         self.save_every = None  # Frecuencia con que se guarda el SVG con la animación de la ejecución
-        self.solution_concept_class = ParetoSolutionConcept
 
         # Parámetros fijados por el entorno
         self.num_actions = 5  # STAY, UP, DOWN, LEFT, RIGHT
