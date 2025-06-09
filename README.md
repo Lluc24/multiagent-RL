@@ -4,7 +4,7 @@
 - Python 3.6+. This project has been made with Python 3.10.13
 
 ### Installation
-For intalling the requirements, tweo virtual environments are recommended: one for the pogema and one for wandb. We
+For installing the requirements, two virtual environments are recommended: one for the pogema and one for wandb. We
 recommend working with two terminals, one for each virtual environment.
 
 1. In one terminal, create a virtual environment for working with pogema, activate it, and install the requirements:
@@ -26,7 +26,7 @@ pip install wandb
 To reproduce the experiments described in the report, run the following commands:
 
 ### Experiment 1
-On the second terminal (with wandb-env activated), run each commando below for experimenting
+On the second terminal (with wandb-env activated), run each command below for experimenting
 with the four different solution concepts:
 
 #### 1. Pareto solution concept
