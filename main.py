@@ -113,7 +113,7 @@ if __name__ == '__main__':
     # Modelo de juego y algoritmos (uno para cada agente)
     game = GameModel(num_agents=exp_config["num_agents"], num_states=exp_config["num_states"],
                      num_actions=5)  # STAY, UP, DOWN, LEFT, RIGHT
-    algorithms = [
+    algorithms = [ # Guarda el objeto algoritmo con sus parámetros que se usará para cada agente
         JALGT(
             agent_id=i,
             game=game,
@@ -141,27 +141,31 @@ if __name__ == '__main__':
         # Entrenamiento
         ###############
         for ep in range(exp_config["episodes_per_epoch"]):
-            pbar.set_postfix({'modo': 'entrenamiento', 'episodio': ep})
+            pbar.set_postfix({'modo': 'entrenamiento', 'episodio': ep}) # Barra de progreso
             env = create_env(config=exp_config, seed=ep % exp_config["maps"])
             observations, infos = env.reset()
             terminated = truncated = [False, ...]
             train_rewards = [0] * game.num_agents
-            states = [obs_to_state(observations[i]) for i in range(game.num_agents)]
+            states = [obs_to_state(observations[i]) for i in range(game.num_agents)] # Obtiene los estados
             while not all(terminated) and not all(truncated):  # Hasta que acabe el episodio
                 # Elegimos acciones
                 actions = tuple([algorithms[i].select_action(states[i]) for i in range(game.num_agents)])
                 # Ejecutamos acciones en el entorno
                 observations, rewards, terminated, truncated, infos = env.step(actions)
                 # Aprendemos: actualizamos valores Q
-                [algorithms[i].learn(actions, rewards, states[i], obs_to_state(observations[i]))
-                 for i in range(game.num_agents)]
+                for i in range(game.num_agents):
+                    algorithms[i].learn(actions, rewards, states[i], obs_to_state(observations[i]))
                 # Actualizamos métricas
-                train_rewards = [train_rewards[i] + rewards[i] for i in range(game.num_agents)]
-                all_td_errors.append(algorithms[0].metrics["td_error"][-1])
+                for i in range(game.num_agents):
+                    train_rewards[i] += rewards[i]
+                all_td_errors.append(algorithms[0].metrics["td_error"][-1]) # El TD_error del 1o ya es representativo
                 # Preparar siguiente iteración: convertir observaciones parciales en estados
                 states = [obs_to_state(observations[i]) for i in range(game.num_agents)]
             # Actualizamos epsilon
-            [algorithms[i].set_epsilon(exp_config["epsilon_max"] - epsilon_diff * ep) for i in range(game.num_agents)]
+            for algorithm in algorithms:
+                new_epsilon = exp_config["epsilon_max"] - epsilon_diff * ep
+                algorithm.set_epsilon(new_epsilon)
+
         td_error_per_epoch.append(sum(all_td_errors))
 
         # Evaluación
