@@ -52,7 +52,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Script for running a sweep with WandB.')
     parser.add_argument("--name", type=str, default="JAL-GT", help="Name of the wandb project")
     parser.add_argument("--script", type=str, help="Path to the script to run the experiment with", required=True)
-    parser.add_argument('--sweep', type=str, help='Path to the sweep (e.g. sweeps/sweep1.json)', required=True)
+    parser.add_argument('--sweep', type=str, help='Path to the sweep (e.g. sweeps/sweep2.json)', required=True)
     parser.add_argument("--count", type=int, default=30, help="Number of runs to perform in the sweep")
     parser.add_argument("--solution-concept", nargs='+', help="Solution concept to be used by each agent. Specify only one if all agents use the same", default=["Pareto"])
     args = parser.parse_args()

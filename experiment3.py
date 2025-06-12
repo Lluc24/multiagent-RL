@@ -1,6 +1,6 @@
 import os
 from tqdm import tqdm
-from algorithms import JALGT
+from algorithms import IQL
 from environment import Environment, obs_to_state
 from game_model import GameModel
 import shutil
@@ -26,7 +26,7 @@ def train_algorithms(parameters, env_manager, algorithms, metrics):
             new_states = [obs_to_state(observations[i]) for i in range(parameters.get("num_agents"))]
             for i in range(parameters.get("num_agents")):
                 # Aprendemos: actualizamos valores Q
-                algorithms[i].learn(actions, rewards, states[i], new_states[i])
+                algorithms[i].learn(actions, rewards, states[i], new_states)
             states = new_states
 
             # métricas
@@ -90,14 +90,13 @@ def setup(wandb_config, solution_concept):
         num_actions=parameters.get("num_actions"),
     )
     algorithms = [
-        JALGT(
-            agent_id=i,
-            game=game,
-            solution_concept=parameters.get("solution_concept_class")(),
-            epsilon=parameters.get("epsilon_max"),
-            gamma=parameters.get("gamma"),
-            alpha=parameters.get("alpha_max"),
-            seed=i
+        IQL(
+                agent_id=i,
+                game=game,
+                epsilon=parameters.get("epsilon_max"),
+                gamma=parameters.get("gamma"),
+                alpha=parameters.get("alpha_max"),
+                seed=i
         )
         for i in range(game.num_agents)
     ]

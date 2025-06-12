@@ -20,6 +20,42 @@ class MARLAlgorithm(abc.ABC):
     def select_action(self, state):
         pass
 
+class IQL(MARLAlgorithm):
+    def __init__(self, agent_id, game: GameModel, gamma=0.95, alpha=0.5, epsilon=0.2, seed=42):
+        self.agent_id = agent_id
+        self.game = game
+        self.alpha = alpha
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.rng = random.Random(seed)
+        self.q_table = np.zeros((self.game.num_states, self.game.num_actions))
+        self.metrics = {"td_error": []}
+
+    def learn(self, joint_action, rewards, next_state: int, observations):
+        # Observations puede incluir el estado actual (para entornos parcialmente observables),
+        # pero aquí suponemos acceso al estado (fully observable).
+        state = observations[self.agent_id]
+        action = joint_action[self.agent_id]
+        reward = rewards[self.agent_id]
+
+        max_next_q = np.max(self.q_table[next_state])
+        td_target = reward + self.gamma * max_next_q
+        td_error = td_target - self.q_table[state][action]
+        self.q_table[state][action] += self.alpha * td_error
+
+        self.metrics['td_error'].append(td_error)
+
+    def select_action(self, state, train=True):
+        if train and self.rng.random() < self.epsilon:
+            return self.rng.choice(range(self.game.num_actions))
+        else:
+            return np.argmax(self.q_table[state])
+
+    def explain(self, state=0):
+        q_vals = self.q_table[state]
+        explanation = f"Q-values for agent {self.agent_id} in state {state}: {q_vals}"
+        return explanation
+
 
 class JALGT(MARLAlgorithm):
     def __init__(self, agent_id, game: GameModel, solution_concept: SolutionConcept,
