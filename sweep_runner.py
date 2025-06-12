@@ -7,7 +7,7 @@ import os
 
 class Vars:
     path_to_script = None
-    soluction_concept = None
+    solution_concept = None
 
 def train(config=None):
     # Initialize a new wandb run
@@ -30,7 +30,7 @@ def train(config=None):
             Vars.path_to_script,  # script to run
             "--configuration", config_path,
             "--metrics", metrics_path,
-            "--solution-concept", Vars.soluction_concept
+            "--solution-concept", *Vars.solution_concept
         ])
 
         # Read metrics
@@ -65,7 +65,7 @@ if __name__ == "__main__":
             os.makedirs(path)
 
     Vars.path_to_script = args.script
-    Vars.soluction_concept = " ".join(args.solution_concept)
+    Vars.solution_concept = args.solution_concept
 
     with open(args.sweep, "r") as f:
         sweep_config = json.load(f)
