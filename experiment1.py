@@ -55,17 +55,27 @@ def evaluate_algorithms(parameters, env_manager, algorithms, metrics, solution_c
         env_manager.save_animations(solution_concept_name, ep, epoch)
 
 def setup(wandb_config, solution_concept):
-    if solution_concept == "Pareto":
-        solution_concept_class = ParetoSolutionConcept
-    elif solution_concept == "Nash":
-        solution_concept_class = NashSolutionConcept
-    elif solution_concept == "Welfare":
-        solution_concept_class = WelfareSolutionConcept
-    elif solution_concept == "Minimax":
-        solution_concept_class = MinimaxSolutionConcept
-    else:
-        raise ValueError(f"Unknown solution concept: {solution_concept}")
-    parameters = Parameters(wandb_config, solution_concept_class)
+    if not isinstance(solution_concept, list):
+        raise ValueError("Solution concept must be a list of strings.")
+    parameters = Parameters(wandb_config)
+    parameters.solution_concept_class = []
+    for i in range(parameters.get("num_agents")):
+        if i >= len(solution_concept):
+            name = solution_concept[-1]
+        else:
+            name = solution_concept[i]
+        if name == "Pareto":
+            solution_concept_class = ParetoSolutionConcept
+        elif name == "Nash":
+            solution_concept_class = NashSolutionConcept
+        elif name == "Welfare":
+            solution_concept_class = WelfareSolutionConcept
+        elif name == "Minimax":
+            solution_concept_class = MinimaxSolutionConcept
+        else:
+            raise ValueError(f"Unknown solution concept: {solution_concept}")
+        parameters.solution_concept_class.append(solution_concept_class)
+
     parameters.print()
     environment = Environment(
         num_agents=parameters.get("num_agents"),
@@ -93,7 +103,7 @@ def setup(wandb_config, solution_concept):
         JALGT(
             agent_id=i,
             game=game,
-            solution_concept=parameters.get("solution_concept_class")(),
+            solution_concept=parameters.get("solution_concept_class")[i](),
             epsilon=parameters.get("epsilon_max"),
             gamma=parameters.get("gamma"),
             alpha=parameters.get("alpha_max"),
@@ -133,7 +143,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script for running an experiment.')
     parser.add_argument('--configuration', type=str, help='Path to the configuration file', required=False)
     parser.add_argument("--metrics", type=str, help="Path for the output metrics", required=True)
-    parser.add_argument("--solution-concept", type=str, help="Solution concept to be used for all agents", required=True)
+    parser.add_argument("--solution-concept", nargs='+', help="Solution concept to be used by each agent. Specify only one if all agents use the same", required=True)
     args = parser.parse_args()
     # Load the configuration file as a dictionary (it is a JSON file)
     if args.configuration is None:

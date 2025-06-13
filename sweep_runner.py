@@ -7,7 +7,7 @@ import os
 
 class Vars:
     path_to_script = None
-    soluction_concept = None
+    solution_concept = None
 
 def train(config=None):
     # Initialize a new wandb run
@@ -30,7 +30,7 @@ def train(config=None):
             Vars.path_to_script,  # script to run
             "--configuration", config_path,
             "--metrics", metrics_path,
-            "--solution-concept", Vars.soluction_concept
+            "--solution-concept", *Vars.solution_concept
         ])
 
         # Read metrics
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument("--script", type=str, help="Path to the script to run the experiment with", required=True)
     parser.add_argument('--sweep', type=str, help='Path to the sweep (e.g. sweeps/sweep1.json)', required=True)
     parser.add_argument("--count", type=int, default=30, help="Number of runs to perform in the sweep")
-    parser.add_argument("--solution-concept", type=str, help="Solution concept to be used for all agents", default="Pareto")
+    parser.add_argument("--solution-concept", nargs='+', help="Solution concept to be used by each agent. Specify only one if all agents use the same", default=["Pareto"])
     args = parser.parse_args()
 
     logs_dir = "logs"
@@ -65,7 +65,7 @@ if __name__ == "__main__":
             os.makedirs(path)
 
     Vars.path_to_script = args.script
-    Vars.soluction_concept = args.solution_concept
+    Vars.solution_concept = args.solution_concept
 
     with open(args.sweep, "r") as f:
         sweep_config = json.load(f)
