@@ -10,6 +10,14 @@ from parameters import Parameters
 from metrics import Metrics
 from solution_concepts import ParetoSolutionConcept, NashSolutionConcept, WelfareSolutionConcept, MinimaxSolutionConcept
 
+GAMMA = [0.999, 0.99]
+EPSILON_DECAY = [0.7, 0.99]
+EPSILON_MIN = [0.3, 0.4]
+EPSILON_MAX = [1, 0.1]
+ALPHA_DECAY = [0.95, 0.99]
+ALPHA_MIN = [0.01, 0.01]
+ALPHA_MAX = [0.01, 0.3]
+
 def train_algorithms(parameters, env_manager, algorithms, metrics):
     for ep in range(parameters.get("episodes_per_epoch")):
         env = env_manager.new_env(seed=ep % parameters.get("num_maps"))
@@ -55,17 +63,27 @@ def evaluate_algorithms(parameters, env_manager, algorithms, metrics, solution_c
         env_manager.save_animations(solution_concept_name, ep, epoch)
 
 def setup(wandb_config, solution_concept):
-    if solution_concept == "Pareto":
-        solution_concept_class = ParetoSolutionConcept
-    elif solution_concept == "Nash":
-        solution_concept_class = NashSolutionConcept
-    elif solution_concept == "Welfare":
-        solution_concept_class = WelfareSolutionConcept
-    elif solution_concept == "Minimax":
-        solution_concept_class = MinimaxSolutionConcept
-    else:
-        raise ValueError(f"Unknown solution concept: {solution_concept}")
-    parameters = Parameters(wandb_config, solution_concept_class)
+    if not isinstance(solution_concept, list):
+        raise ValueError("Solution concept must be a list of strings.")
+    parameters = Parameters(wandb_config)
+    parameters.solution_concept_class = []
+    for i in range(parameters.get("num_agents")):
+        if i >= len(solution_concept):
+            name = solution_concept[-1]
+        else:
+            name = solution_concept[i]
+        if name == "Pareto":
+            solution_concept_class = ParetoSolutionConcept
+        elif name == "Nash":
+            solution_concept_class = NashSolutionConcept
+        elif name == "Welfare":
+            solution_concept_class = WelfareSolutionConcept
+        elif name == "Minimax":
+            solution_concept_class = MinimaxSolutionConcept
+        else:
+            raise ValueError(f"Unknown solution concept: {solution_concept}")
+        parameters.solution_concept_class.append(solution_concept_class)
+
     parameters.print()
     environment = Environment(
         num_agents=parameters.get("num_agents"),
@@ -93,10 +111,10 @@ def setup(wandb_config, solution_concept):
         JALGT(
             agent_id=i,
             game=game,
-            solution_concept=parameters.get("solution_concept_class")(),
-            epsilon=parameters.get("epsilon_max"),
-            gamma=parameters.get("gamma"),
-            alpha=parameters.get("alpha_max"),
+            solution_concept=parameters.get("solution_concept_class")[i](),
+            epsilon=EPSILON_MAX[i],
+            gamma=GAMMA[i],
+            alpha=ALPHA_MAX[i],
             seed=i
         )
         for i in range(game.num_agents)
@@ -121,8 +139,8 @@ def run(output_path, solution_concept, config=None):
         metrics.set_epsilon(algorithms[0].epsilon)
         metrics.set_alpha(algorithms[0].alpha)
         for i in range(parameters.get("num_agents")):
-            algorithms[i].epsilon = max(parameters.get("epsilon_decay")*algorithms[i].epsilon, parameters.get("epsilon_min"))
-            algorithms[i].alpha = max(parameters.get("alpha_decay")*algorithms[i].alpha, parameters.get("alpha_min"))
+            algorithms[i].epsilon = max(EPSILON_DECAY[i]*algorithms[i].epsilon, EPSILON_MIN[i])
+            algorithms[i].alpha = max(ALPHA_DECAY[i]*algorithms[i].alpha, ALPHA_MIN[i])
 
         metrics.incr_epoch()
 
@@ -130,10 +148,10 @@ def run(output_path, solution_concept, config=None):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Script for running an experiment.')
+    parser = argparse.ArgumentParser(description='Script for running second experiment.')
     parser.add_argument('--configuration', type=str, help='Path to the configuration file', required=False)
     parser.add_argument("--metrics", type=str, help="Path for the output metrics", required=True)
-    parser.add_argument("--solution-concept", type=str, help="Solution concept to be used for all agents", required=True)
+    parser.add_argument("--solution-concept", nargs='+', help="Solution concept to be used by each agent. Specify only one if all agents use the same", required=True)
     args = parser.parse_args()
     # Load the configuration file as a dictionary (it is a JSON file)
     if args.configuration is None:
