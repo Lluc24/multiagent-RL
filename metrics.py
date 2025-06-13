@@ -11,6 +11,7 @@ class Metrics:
         self.agent_train_rewards = np.zeros((num_epochs, num_agents))
         self.agent_evaluate_rewards = np.zeros((num_epochs, num_agents))
         self.agent_td_errors = np.zeros((num_epochs, num_agents))
+        self.agent_loss = np.zeros((num_epochs, num_agents))
         self.agent_train_success_rates = np.zeros((num_epochs, num_agents))
         self.agent_evaluate_success_rates = np.zeros((num_epochs, num_agents))
         self.agent_train_steps = np.zeros((num_epochs, num_agents))
@@ -28,6 +29,11 @@ class Metrics:
     def add_td_errors(self, td_errors):
         for i in range(self.num_agents):
             self.agent_td_errors[self.epoch, i] += td_errors[i]
+            
+    def add_loss(self, loss):
+        for i in range(self.num_agents):
+            self.agent_loss[self.epoch, i] = loss[i] 
+            #Only one loss per epoch as it is calculated at the end of epoch, therefore we don't add as in td_error, we assign
 
     def add_to_success_rates(self, terminated, truncated, training=True):
         for i in range(self.num_agents):
@@ -55,11 +61,30 @@ class Metrics:
         self.epoch += 1
 
     def serialize_metrics(self, path):
+        """Serializes all metrics to a JSON file.
+        
+        Preconditions:
+            - path is a valid file path with write permissions
+            - All metrics have been properly tracked during training/evaluation
+            - self.epoch > 0 (at least one epoch has been completed)
+            - All metrics arrays have been initialized with the correct dimensions
+        
+        Postconditions:
+            - A JSON file is created at the specified path
+            - The JSON file contains all per-agent metrics normalized by episode count
+            - Average metrics across all agents are included
+            - The final evaluation reward is calculated and stored
+            - All array data is converted to Python lists for JSON serialization
+        
+        Args:
+            path (str): The file path where the JSON metrics will be saved
+        """
         metrics = {}
         for i in range(self.num_agents):
             metrics[f"agent_{i}_train_rewards"] = (self.agent_train_rewards[:, i]/self.train_episodes).tolist()
             metrics[f"agent_{i}_evaluate_rewards"] = (self.agent_evaluate_rewards[:, i]/self.evaluate_episodes).tolist()
             metrics[f"agent_{i}_td_errors"] = (self.agent_td_errors[:, i]/self.train_episodes).tolist()
+            metrics[f"agent_{i}_loss"] = (self.agent_loss[:, i]/self.train_episodes).tolist()
             metrics[f"agent_{i}_train_success_rates"] = (self.agent_train_success_rates[:, i]/self.train_episodes).tolist()
             metrics[f"agent_{i}_evaluate_success_rates"] = (self.agent_evaluate_success_rates[:, i]/self.evaluate_episodes).tolist()
             metrics[f"agent_{i}_train_steps"] = (self.agent_train_steps[:, i]/self.train_episodes).tolist()
@@ -72,6 +97,7 @@ class Metrics:
         metrics["average_train_rewards"] = (np.sum(self.agent_train_rewards, axis=1) / self.num_agents / self.train_episodes).tolist()
         metrics["average_evaluate_rewards"] = (np.sum(self.agent_evaluate_rewards, axis=1) / self.num_agents / self.evaluate_episodes).tolist()
         metrics["average_td_errors"] = (np.sum(self.agent_td_errors, axis=1) / self.num_agents / self.train_episodes).tolist()
+        metrics["average_loss"] = (np.sum(self.agent_loss, axis=1) / self.num_agents / self.train_episodes).tolist()
         metrics["average_train_success_rates"] = (np.sum(self.agent_train_rewards, axis=1) / self.num_agents / self.train_episodes).tolist()
         metrics["average_evaluate_success_rates"] = (np.sum(self.agent_evaluate_success_rates, axis=1) / self.num_agents / self.evaluate_episodes).tolist()
         metrics["average_train_steps"] = (np.sum(self.agent_train_steps, axis=1) / self.num_agents / self.train_episodes).tolist()

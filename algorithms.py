@@ -92,16 +92,15 @@ class JALGT(MARLAlgorithm):
 
 # Clase ReinforceAgent
 class ReinforceAgent(MARLAlgorithm):
-    def __init__(self, game: GameModel, gamma=0.95, learning_rate=0.99, lr_decay=1, seed=42, t_max=200):
+    def __init__(self, game: GameModel, gamma=0.95, learning_rate=0.99, lr_decay=1, seed=42):
         self.game = game
         self.gamma = gamma
         self.learning_rate = learning_rate
         self.lr_decay = lr_decay
-        self.t_max = t_max
         # Adaptación: tabla de política para un solo agente
         self.policy_table = np.ones((self.game.num_states, self.game.num_actions)) / self.game.num_actions
         np.random.seed(seed)
-        self.metrics = {"reward": [], "loss": []}  # Encara haig de pensar com adaptar
+        self.metrics = {"loss": []}  # Encara haig de pensar com adaptar
 
     # Pre: recibe lista de estados, acciones y recompensas a lo largo de un episodio.
     # Post: actualiza la política del agente y devuelve su pérdida
@@ -129,12 +128,11 @@ class ReinforceAgent(MARLAlgorithm):
 
     # Pre: recibe 3 listas con las acciones, recompensas y estados del agente a lo largo de un episodio.
     # Post: guarda la pérdida y el reward acumulado del episodio
-    def learn_episode(self, actions, rewards, states):
+    def learn(self, actions, rewards, states):
         loss = self.update_policy(states, actions, rewards)
         total_reward = sum(rewards)
         self.learning_rate *= self.lr_decay
         # Guardar métricas
-        self.metrics["reward"].append(total_reward)
         self.metrics["loss"].append(loss)
 
     # Pre: recibe el estado actual del agente.
@@ -145,3 +143,10 @@ class ReinforceAgent(MARLAlgorithm):
             return np.random.choice(np.arange(self.game.num_actions), p=action_probabilities)
         else:
             return np.argmax(action_probabilities)
+
+    # It is not clear to us what the specific intent of this method is in the superclass MARLAlgorithm, therefore we decided to return the policy_table as an implementation is needed since it is an abstract method
+    def explain(self):
+        return self.policy_table
+    
+    def get_alpha(self):
+        return self.learning_rate

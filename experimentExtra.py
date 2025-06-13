@@ -10,62 +10,102 @@ from parameters import Parameters
 from metrics import Metrics
 
 def train_algorithms(parameters, env_manager, algorithms, metrics):
+    """Train algorithms over multiple episodes."""
     for ep in range(parameters.get("episodes_per_epoch")):
-        env = env_manager.new_env(seed=ep % parameters.get("num_maps"))
-        observations, infos = env.reset()
-        terminated = [False for _ in range(parameters.get("num_agents"))]
-        truncated = [False for _ in range(parameters.get("num_agents"))]
-        states = [obs_to_state(observations[i]) for i in range(parameters.get("num_agents"))]
+        # Initialize episode
+        env, states, _, _ = initialize_episode(env_manager, parameters, ep)
         
-        # Initialize trajectory storage for each agent
-        episode_states = [[] for _ in range(parameters.get("num_agents"))]
-        episode_actions = [[] for _ in range(parameters.get("num_agents"))]
-        episode_rewards = [[] for _ in range(parameters.get("num_agents"))]
+        # Run episode and collect trajectories
+        episode_states, episode_actions, episode_rewards, terminated, truncated = run_episode_loop(
+            env, algorithms, metrics, parameters, states
+        )
         
-        while not all(terminated) and not all(truncated):  # Hasta que acabe el episodio
-            # Elegimos acciones
-            actions = tuple(algorithms[i].select_action(states[i]) for i in range(parameters.get("num_agents")))
-            # Ejecutamos acciones en el entorno
-            observations, rewards, terminated, truncated, infos = env.step(actions)
-            # Preparar siguiente iteración: convertir observaciones parciales en estados
-            new_states = [obs_to_state(observations[i]) for i in range(parameters.get("num_agents"))]
-            
-            # Store trajectory data for each agent
-            for i in range(parameters.get("num_agents")):
-                episode_states[i].append(states[i])
-                episode_actions[i].append(actions[i])
-                episode_rewards[i].append(rewards[i])
-            
-            states = new_states
-
-            # métricas
-            metrics.add_rewards(rewards)
-            metrics.add_steps(terminated, truncated)
+        # Learn from episode
+        learn_from_episode(algorithms, episode_actions, episode_rewards, episode_states, metrics, parameters)
         
-        # Learn from complete episode
-        for i in range(parameters.get("num_agents")):
-            # Aprendemos con REINFORCE usando la trayectoria completa
-            algorithms[i].learn_episode(episode_actions[i], episode_rewards[i], episode_states[i])
-            # Update metrics if needed
-            if "loss" in algorithms[i].metrics and algorithms[i].metrics["loss"]:
-                metrics.add_td_errors([algorithms[i].metrics["loss"][-1] for i in range(parameters.get("num_agents"))])
-                
+        # Update success rate metrics
         metrics.add_to_success_rates(terminated, truncated)
+
+#===============Auxiliar Functions for train_algorithms===============
+def initialize_episode(env_manager, parameters, ep):
+    """Initialize a new episode with environment and agent states."""
+    env = env_manager.new_env(seed=ep % parameters.get("num_maps"))
+    observations, _ = env.reset()
+    terminated = [False for _ in range(parameters.get("num_agents"))]
+    truncated = [False for _ in range(parameters.get("num_agents"))]
+    states = [obs_to_state(observations[i]) for i in range(parameters.get("num_agents"))]
+    return env, states, terminated, truncated
+
+def initialize_trajectory_storage(num_agents):
+    """Initialize storage for episode trajectories."""
+    episode_states = [[] for _ in range(num_agents)]
+    episode_actions = [[] for _ in range(num_agents)]
+    episode_rewards = [[] for _ in range(num_agents)]
+    return episode_states, episode_actions, episode_rewards
+
+def store_step_data(episode_states, episode_actions, episode_rewards, states, actions, rewards, num_agents):
+    """Store trajectory data for the current step."""
+    for i in range(num_agents):
+        episode_states[i].append(states[i])
+        episode_actions[i].append(actions[i])
+        episode_rewards[i].append(rewards[i])
+
+def run_episode_loop(env, algorithms, metrics, parameters, initial_states):
+    """Run the main episode loop and return trajectory data."""
+    states = initial_states
+    terminated = [False for _ in range(parameters.get("num_agents"))]
+    truncated = [False for _ in range(parameters.get("num_agents"))]
+
+    episode_states, episode_actions, episode_rewards = initialize_trajectory_storage(parameters.get("num_agents"))
+
+    while not all(terminated) and not all(truncated):
+        # Select actions
+        actions = tuple(algorithms[i].select_action(states[i]) for i in range(parameters.get("num_agents")))
+
+        # Execute actions in environment
+        observations, rewards, terminated, truncated, _ = env.step(actions)
+
+        # Convert observations to states for next iteration
+        new_states = [obs_to_state(observations[i]) for i in range(parameters.get("num_agents"))]
+
+        # Store trajectory data
+        store_step_data(episode_states, episode_actions, episode_rewards, states, actions, rewards, parameters.get("num_agents"))
+
+        states = new_states
+
+        # Update metrics
+        metrics.add_rewards(rewards)
+        metrics.add_steps(terminated, truncated)
+    
+    return episode_states, episode_actions, episode_rewards, terminated, truncated
+
+def learn_from_episode(algorithms, episode_actions, episode_rewards, episode_states, metrics, parameters):
+    """Update algorithms based on episode trajectories."""
+    for i in range(parameters.get("num_agents")):
+        algorithms[i].learn(episode_actions[i], episode_rewards[i], episode_states[i])
+        
+        # Update loss metrics if available
+        if "loss" in algorithms[i].metrics and algorithms[i].metrics["loss"]:
+            metrics.add_loss([algorithms[i].metrics["loss"][-1] for i in range(parameters.get("num_agents"))])
+
+#============End of auxiliar Functions for train_algorithms============
 
 
 def evaluate_algorithms(parameters, env_manager, algorithms, metrics, solution_concept_name, epoch):
     for ep in range(parameters.get("num_maps")):
         env = env_manager.new_env(seed=ep)  # Reaprovechamos mapas del entrenamiento
-        observations, infos = env.reset()
+        observations, _ = env.reset() # Ignored return is infos
         terminated = [False for _ in range(parameters.get("num_agents"))]
         truncated = [False for _ in range(parameters.get("num_agents"))]
         states = [obs_to_state(observations[i]) for i in range(parameters.get("num_agents"))]
         while not all(terminated) and not all(truncated):  # Hasta que acabe el episodio
-            actions = tuple(algorithms[i].select_action(states[i], train=False) for i in range(parameters.get("num_agents")))
-            observations, rewards, terminated, truncated, infos = env.step(actions)
+            actions = tuple(
+                            algorithms[i].select_action(states[i], train=False) for i in range(parameters.get("num_agents"))
+                            )
+            observations, rewards, terminated, truncated, _ = env.step(actions) # Ignored return is infos
             states = [obs_to_state(observations[i]) for i in range(parameters.get("num_agents"))]
 
-            # métricas
+            # no changes with respect to experiment1
             metrics.add_rewards(rewards, training=False)
             metrics.add_steps(terminated, truncated, training=False)
         metrics.add_to_success_rates(terminated, truncated, training=False)
@@ -73,19 +113,10 @@ def evaluate_algorithms(parameters, env_manager, algorithms, metrics, solution_c
         env_manager.save_animations(solution_concept_name, ep, epoch)
 
 def setup(wandb_config):
-    # if solution_concept == "Pareto":
-    #     solution_concept_class = ParetoSolutionConcept
-    # elif solution_concept == "Nash":
-    #     solution_concept_class = NashSolutionConcept
-    # elif solution_concept == "Welfare":
-    #     solution_concept_class = WelfareSolutionConcept
-    # elif solution_concept == "Minimax":
-    #     solution_concept_class = MinimaxSolutionConcept
-    # else:
-    #     raise ValueError(f"Unknown solution concept: {solution_concept}")
-    parameters = Parameters(wandb_config, None) #None because we don't use solution concept
+    parameters = Parameters(wandb_config)
     parameters.print()
-    #No cal tocar per 
+
+    # No changes with respect to experiment1
     environment = Environment(
         num_agents=parameters.get("num_agents"),
         map_size=parameters.get("map_size"),
@@ -108,19 +139,20 @@ def setup(wandb_config):
         num_states=parameters.get("num_states"),
         num_actions=parameters.get("num_actions"),
     )
+
+    # We use REINFORCE instead of using JAL-GT as in experiment 1
     algorithms = [
-        JALGT(
-            agent_id=i,
-            game=game,
-            solution_concept=parameters.get("solution_concept_class")(),
-            epsilon=parameters.get("epsilon_max"),
-            gamma=parameters.get("gamma"),
-            alpha=parameters.get("alpha_max"),
-            seed=i
+        ReinforceAgent(
+            game = game,
+            gamma = parameters.get("gamma"),
+            learning_rate = parameters.get("alpha"),
+            lr_decay = parameters.get("alpha_decay"),
+            seed = i # The method for establishing the seed in experiment1 is maintained
         )
         for i in range(game.num_agents)
     ]
 
+    # No changes were made here with respect to experiment1
     metrics = Metrics(
         num_agents = parameters.get("num_agents"),
         num_epochs = parameters.get("epochs"),
@@ -130,18 +162,14 @@ def setup(wandb_config):
 
     return parameters, environment, algorithms, metrics
 
-def run(output_path, solution_concept, config=None):
+def run(output_path, config=None):
     parameters, environment, algorithms, metrics = setup(config)
-    solution_concept_class = parameters.get("solution_concept_class")
     for epoch in tqdm(range(parameters.get("epochs"))):
         train_algorithms(parameters, environment, algorithms, metrics)
-        evaluate_algorithms(parameters, environment, algorithms, metrics, solution_concept_class, epoch)
+        evaluate_algorithms(parameters, environment, algorithms, metrics, "REINFORCE", epoch) # "REINFORCE" is used where the name of the solution concept used to be placed in experiment1
 
-        metrics.set_epsilon(algorithms[0].epsilon)
-        metrics.set_alpha(algorithms[0].alpha)
-        for i in range(parameters.get("num_agents")):
-            algorithms[i].epsilon = max(parameters.get("epsilon_decay")*algorithms[i].epsilon, parameters.get("epsilon_min"))
-            algorithms[i].alpha = max(parameters.get("alpha_decay")*algorithms[i].alpha, parameters.get("alpha_min"))
+        metrics.set_alpha(algorithms[0].get_alpha())
+        # Alpha decay is applied by the function learn at the end of each episode, in contrast with JALGT, REINFORCE allows for this. It is done this way because it is more clean and transparent
 
         metrics.incr_epoch()
 
@@ -152,12 +180,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script for running an experiment.')
     parser.add_argument('--configuration', type=str, help='Path to the configuration file', required=False)
     parser.add_argument("--metrics", type=str, help="Path for the output metrics", required=True)
-    parser.add_argument("--solution-concept", type=str, help="Solution concept to be used for all agents", required=True)
     args = parser.parse_args()
     # Load the configuration file as a dictionary (it is a JSON file)
-    if args.configuration is None:
-        run(args.metrics, args.solution_concept)
-    else:
+    if args.configuration is None: # We are not using wandb
+        run(args.metrics)
+    else: # We are in wandb mode
         with open(args.configuration, "r") as f:
             config = json.load(f)
-        run(args.metrics, args.solution_concept, config)
+        run(args.metrics, config)
