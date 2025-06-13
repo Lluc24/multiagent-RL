@@ -1,0 +1,33 @@
+{
+    "method": "random",
+    "metric": {
+        "name": "reward",
+        "goal": "maximize"
+    },
+    "parameters": {
+        "gamma": {
+            "values": [0.999]
+        },
+        "epsilon_max":{
+            "values": [1.0]
+        },
+        "epsilon_min": {
+            "values": [0.3]
+        },
+        "epsilon_decay": {
+            "values": [0.7]
+        },
+        "alpha_max": {
+            "values": [0.01]
+        },
+        "alpha_min": {
+            "values": [0.01]
+        },
+        "alpha_decay": {
+            "values": [0.95]
+        },
+        "agents": {
+            "values": [3]
+        }
+    }
+}

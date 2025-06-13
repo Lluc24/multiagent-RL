@@ -26,7 +26,7 @@ def train(config=None):
 
         # Call pogema script (from its env)
         subprocess.run([
-            os.path.join("..","pogema-env", "bin", "python"),  # path to pogema-env Python
+            os.path.join("pogema-env", "bin", "python"),  # path to pogema-env Python
             Vars.path_to_script,  # script to run
             "--configuration", config_path,
             "--metrics", metrics_path,
