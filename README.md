@@ -48,3 +48,9 @@ python3 sweep_runner.py --script experiment1.py --sweep sweeps/sweep1.json --cou
 ```bash
 python3 sweep_runner.py --script experiment1.py --sweep sweeps/sweep1.json --count=100 --solution-concept=Minimax
 ```
+
+### Experiment Extra: training with REINFORCE
+To execute experiments with reinforce we use the sweep `sweepExtra_1.json` and script `experimentExtra.py`. It is executed in wandb this way:
+```bash
+python3 sweep_runner.py --script experimentExtra.py --sweep sweeps/sweepExtra_1.json --count=126
+```
