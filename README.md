@@ -49,6 +49,34 @@ python3 sweep_runner.py --script experiment1.py --sweep sweeps/sweep1.json --cou
 python3 sweep_runner.py --script experiment1.py --sweep sweeps/sweep1.json --count=100 --solution-concept=Minimax
 ```
 
+### Experiment 3
+On the second terminal (with wandb-env activated), run each command below for experimenting
+with the four different solution concepts:
+```bash
+ python3 sweep_runner.py --script experiment3.py --sweep sweeps/sweep1.json --count=100 --solution-concept=Pareto
+ ```
+
+ ### Experiment 4
+
+
+To prove the generalization with a map 8x8 we execute the command bellow:
+```bash
+ python3 sweep_runner.py --script experiment4.py --sweep sweeps/sweep4.json --count=1 --solution-concept=Pareto
+ ```
+
+To prove the generalization with 3 agents we execute the command bellow:
+```bash
+ python3 sweep_runner.py --script experiment4.py --sweep sweeps/sweep5.json --count=1 --solution-concept=Pareto
+ ```
+
+ ### Experiment 5
+
+ On the first terminal we exevcute this command, we can find the results at ./NewMaps/metrics.json
+
+```bash
+ python experiment5.py --metrics newMaps --solution-concept Pareto
+```
+
 ### Experiment Extra: training with REINFORCE
 To execute experiments with reinforce we use the sweep `sweepExtra_1.json` and script `experimentExtra.py`. It is executed in wandb this way:
 ```bash
