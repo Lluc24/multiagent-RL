@@ -48,3 +48,10 @@ python3 sweep_runner.py --script experiment1.py --sweep sweeps/sweep1.json --cou
 ```bash
 python3 sweep_runner.py --script experiment1.py --sweep sweeps/sweep1.json --count=100 --solution-concept=Minimax
 ```
+
+### Experiment 2
+On the second terminal (with wandb-env activated), run the command below to replicate the second experiment:
+
+```bash
+python3 sweep_runner.py --script experiment1.py --sweep sweeps/sweep2.json --count 1 --solution-concept Pareto Nash
+```

@@ -1,0 +1,13 @@
+{
+    "method": "random",
+    "metric": {
+        "name": "reward",
+        "goal": "maximize"
+    },
+    "parameters": {
+        "run": {
+            "values": [1]
+        }
+
+    }
+}
