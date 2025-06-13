@@ -1,0 +1,18 @@
+{
+    "method": "random",
+    "metric": {
+        "name": "reward",
+        "goal": "maximize"
+    },
+    "parameters": {
+        "gamma": {
+            "values": [0.99, 0.95, 0.9, 0.75, 0.5, 0.35, 0.1]
+        },
+        "alpha_max": {
+            "values": [0.99, 0.95, 0.9, 0.75, 0.5, 0.35]
+        },
+        "alpha_decay": {
+            "values": [0.9, 0.99, 0.999]
+        }
+    }
+}

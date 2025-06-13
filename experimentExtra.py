@@ -84,9 +84,7 @@ def learn_from_episode(algorithms, episode_actions, episode_rewards, episode_sta
     for i in range(parameters.get("num_agents")):
         algorithms[i].learn(episode_actions[i], episode_rewards[i], episode_states[i])
         
-        # Update loss metrics if available
-        if "loss" in algorithms[i].metrics and algorithms[i].metrics["loss"]:
-            metrics.add_loss([algorithms[i].metrics["loss"][-1] for i in range(parameters.get("num_agents"))])
+    metrics.add_loss([algorithms[i].metrics["loss"][-1] for i in range(parameters.get("num_agents"))])
 
 #============End of auxiliar Functions for train_algorithms============
 
@@ -145,7 +143,7 @@ def setup(wandb_config):
         ReinforceAgent(
             game = game,
             gamma = parameters.get("gamma"),
-            learning_rate = parameters.get("alpha"),
+            learning_rate = parameters.get("alpha_max"),
             lr_decay = parameters.get("alpha_decay"),
             seed = i # The method for establishing the seed in experiment1 is maintained
         )
