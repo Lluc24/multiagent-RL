@@ -6,7 +6,7 @@ from game_model import GameModel
 import shutil
 import argparse
 import json
-from paremeters5 import Parameters
+from paremeters import Parameters
 from solution_concepts import ParetoSolutionConcept, NashSolutionConcept, WelfareSolutionConcept, MinimaxSolutionConcept
 
 def create_metrics(num_agents):
@@ -126,7 +126,13 @@ def evaluate_on_unseen_maps(parameters, env_manager, algorithms, metrics, soluti
 def setup(wandb_config, solution_concept):
     if not isinstance(solution_concept, list):
         raise ValueError("Solution concept must be a list of strings.")
-    parameters = Parameters(wandb_config)
+    parameters = Parameters(
+        config=wandb_config,
+        gamma=0.999,
+        epsilon_min=0.3,
+        epsilon_decay=0.7,
+        alpha_min=0.01,
+    )
     parameters.solution_concept_class = []
     for i in range(parameters.get("num_agents")):
         if i >= len(solution_concept):
