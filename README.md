@@ -57,15 +57,15 @@ We chose to implement **REINFORCE**, a gradient-based method.
 ## 👥 Team and Work Distribution
 
 Team members:
-- Francisco Badia Laguillo
-- José Durán Foix
-- Lluc Santamaria Riba
+- [Francisco Badia Laguillo](https://github.com/siscubl04)
+- [José Durán Foix](https://github.com/jdf0607)
+- [Lluc Santamaria Riba](https://github.com/Lluc24)
 
 We divided the work as follows:
 
-- **Lluc** focused on the first three research questions, analyzing convergence properties, behavior under different solution concepts, and coordination when using heterogeneous strategies.
-- **José** handled the analysis comparing JAL-GT and IQL, as well as generalization across environment sizes and map types.
-- **Francisco** implemented and experimented with the **REINFORCE algorithm**, conducting the bonus experiment.
+- [**Lluc**](https://github.com/Lluc24) focused on the first three research questions, analyzing convergence properties, behavior under different solution concepts, and coordination when using heterogeneous strategies.
+- [**José**](https://github.com/jdf0607) handled the analysis comparing JAL-GT and IQL, as well as generalization across environment sizes and map types.
+- [**Francisco**](https://github.com/siscubl04) implemented and experimented with the **REINFORCE algorithm**, conducting the bonus experiment.
 
 Each experiment addressed specific questions:
 
